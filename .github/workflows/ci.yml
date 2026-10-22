@@ -1,0 +1,61 @@
+name: Test and build
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test-and-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test HTTP behavior
+        run: python -m unittest discover -s tests -v
+      - name: Build non-root container
+        run: docker build -t devops-signal:ci .
+      - name: Smoke test a read-only container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name signal --read-only --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8080:8080 devops-signal:ci
+          trap 'docker logs signal; docker rm -f signal' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8080/readyz; then break; fi
+            sleep 1
+          done
+          curl --fail http://127.0.0.1:8080/healthz
+          curl --fail http://127.0.0.1:8080/metrics
+          test "$(docker inspect --format '{{.Config.User}}' signal)" = "10001:10001"
+  kubernetes-demo:
+    needs: test-and-container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: Install local-cluster tooling
+        run: go install sigs.k8s.io/kind@v0.27.0
+      - name: Deploy and verify in an ephemeral Kubernetes cluster
+        shell: bash
+        run: |
+          set -euo pipefail
+          kind create cluster --name signal --wait 120s
+          trap 'kind export logs kind-logs --name signal || true; kind delete cluster --name signal' EXIT
+          docker build -t devops-signal:local .
+          kind load docker-image devops-signal:local --name signal
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/devops-signal --timeout=120s
+          kubectl get pods -l app=devops-signal
+          kubectl port-forward service/devops-signal 8080:80 >port-forward.log 2>&1 &
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:8080/readyz; then break; fi
+            sleep 1
+          done
+          curl --fail http://127.0.0.1:8080/readyz
+          curl --fail http://127.0.0.1:8080/api/info
+          curl --fail http://127.0.0.1:8080/metrics
