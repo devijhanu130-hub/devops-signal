@@ -4,11 +4,14 @@ Date: October 22, 2026.
 
 | Check | Status |
 | --- | --- |
-| Python HTTP tests | Run locally; see test execution summary supplied with the project |
-| Docker image build | Not run locally: Docker is not installed in the preparation environment |
-| Read-only container smoke test | Configured in GitHub Actions; not run yet |
-| Kubernetes deployment and probes | Manifests and CI job provided; not run yet |
-| Prometheus scrape | Configuration provided; not run yet |
-| GitHub Actions run | Pending GitHub account and repository publication |
+| Python HTTP tests | Ten tests passed locally and in GitHub Actions |
+| Docker image build | Passed in GitHub Actions |
+| Read-only, non-root container smoke test | Passed in GitHub Actions |
+| Trivy vulnerability scan | Passed the configured gate for fixable HIGH and CRITICAL findings; this does not mean there are no vulnerabilities |
+| Prometheus configuration and alert rules | Validated with promtool in GitHub Actions |
+| Kubernetes deployment and HTTP probes | Passed in an ephemeral Kind cluster in GitHub Actions |
+| Readiness failure and recovery | Verified HTTP 503 readiness alongside HTTP 200 liveness, then recovered the deployment |
+| Live Prometheus scrape/dashboard | Not verified; Compose configuration is provided |
+| GitHub Actions run | Both jobs passed: [execution evidence](https://github.com/devijhanu130-hub/devops-signal/actions/runs/39854092436) |
 
-Only the Python tests have local execution evidence at preparation time. Update this record with run links and observed results after publishing. Do not treat the included Kubernetes or CI configuration as evidence of an actual deployment.
+Verified code commit: `3630fab`. Docker and Kubernetes were executed on the GitHub-hosted runner, not on the preparation computer. The temporary cluster was deleted by the workflow. There is no persistent cloud deployment and no measured production uptime or business impact claim.

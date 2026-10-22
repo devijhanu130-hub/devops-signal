@@ -1,5 +1,9 @@
 # DevOps Signal
 
+[![Test and build](https://github.com/devijhanu130-hub/devops-signal/actions/workflows/ci.yml/badge.svg)](https://github.com/devijhanu130-hub/devops-signal/actions/workflows/ci.yml)
+
+[Portfolio case study](https://jaya-devi-portfolio.vercel.app/#personal-project) · [Operational runbook](docs/runbook.md)
+
 A personal DevOps learning project: a small Python HTTP service, a hardened container, automated checks, an ephemeral Kubernetes deployment, and Prometheus metrics.
 
 This is a demonstration project, not an employer system. It does not claim production traffic, business impact, or measured uptime. The Python standard-library HTTP server is deliberately simple and is not intended for an internet-facing production service.
