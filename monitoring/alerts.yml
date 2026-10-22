@@ -1,0 +1,19 @@
+groups:
+  - name: devops-signal-demo
+    rules:
+      - alert: SignalTargetDown
+        expr: up{job="devops-signal"} == 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: DevOps Signal is not reachable by Prometheus
+          description: Check container health, network reachability, and the readiness runbook.
+      - alert: SignalReadinessErrors
+        expr: rate(signal_requests_total{job="devops-signal",status="503"}[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: DevOps Signal is returning readiness failures
+          description: Liveness can remain healthy while readiness returns 503. Check APP_READY and deployment state.

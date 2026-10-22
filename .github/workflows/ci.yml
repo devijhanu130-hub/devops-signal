@@ -8,8 +8,8 @@ jobs:
   test-and-container:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
       - name: Test HTTP behavior
@@ -29,12 +29,22 @@ jobs:
           curl --fail http://127.0.0.1:8080/healthz
           curl --fail http://127.0.0.1:8080/metrics
           test "$(docker inspect --format '{{.Config.User}}' signal)" = "10001:10001"
+      - name: Scan image for high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: devops-signal:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Validate Prometheus configuration and alert rules
+        run: docker run --rm --entrypoint promtool -v "$PWD/monitoring:/etc/prometheus:ro" prom/prometheus:v3.5.0 check config /etc/prometheus/prometheus.yml
   kubernetes-demo:
     needs: test-and-container
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version: '1.23'
           cache: false
@@ -59,3 +69,13 @@ jobs:
           curl --fail http://127.0.0.1:8080/readyz
           curl --fail http://127.0.0.1:8080/api/info
           curl --fail http://127.0.0.1:8080/metrics
+          kubectl set env deployment/devops-signal APP_READY=false
+          for attempt in $(seq 1 30); do
+            probe_pod=$(kubectl get pods -l app=devops-signal -o json | python scripts/find_unready_pod.py)
+            if [ -n "$probe_pod" ]; then break; fi
+            sleep 1
+          done
+          test -n "$probe_pod"
+          kubectl exec -i "$probe_pod" -- python - < scripts/check_probe.py
+          kubectl set env deployment/devops-signal APP_READY=true
+          kubectl rollout status deployment/devops-signal --timeout=120s

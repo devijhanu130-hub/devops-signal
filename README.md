@@ -48,9 +48,9 @@ Open <http://localhost:8080/>. Stop the server with Ctrl+C.
 | `/api/info` | Service name, configured environment, and version |
 | `/metrics` | Prometheus counter and process age |
 
-The readiness and liveness endpoints currently both return success while the process handles requests. In a real service, readiness would also evaluate necessary dependencies without turning transient dependency failures into liveness restart loops.
+Readiness returns HTTP 503 when `APP_READY=false`; liveness continues to return 200. This explicit simulation control supports a failure-and-recovery exercise in CI and the [operational runbook](docs/runbook.md). It is not a real external dependency check.
 
-Optional environment variables: `PORT` (default `8080`), `APP_ENV` (default `local`), and `APP_VERSION` (default `dev`). The service only exposes those selected values, not the entire environment.
+Optional environment variables: `PORT` (default `8080`), `APP_ENV` (default `local`), and `APP_VERSION` (default `dev`), and `APP_READY` (default `true`). The service only exposes those selected values, not the entire environment.
 
 ## Run the container
 
@@ -78,7 +78,7 @@ signal_uptime_seconds
 up{job="devops-signal"}
 ```
 
-Requests include probes and metrics scrapes. The current `/metrics` response reports requests completed before that scrape. A restart resets the process-local counter. The demo does not have a persistent business-metrics store or production alerting.
+Requests include probes and metrics scrapes. The current `/metrics` response reports requests completed before that scrape. A restart resets the process-local counter. The demo includes two Prometheus alert rules (target down and readiness errors), but no Alertmanager or external notification integration. It does not have a persistent business-metrics store.
 
 ```sh
 docker compose down
@@ -111,7 +111,9 @@ The Service is internal. There is no public load balancer, DNS, TLS, or cloud bi
 The workflow is in [`.github/workflows/ci.yml`](.github/workflows/ci.yml). After pushing to GitHub, open the repository's **Actions** tab. Two jobs should appear:
 
 1. `test-and-container`: unit/integration tests, Docker build, and a container smoke test.
-2. `kubernetes-demo`: an automated deployment to a temporary local Kubernetes cluster and HTTP verification.
+2. `kubernetes-demo`: an automated deployment to a temporary local Kubernetes cluster, HTTP verification, controlled readiness failure, and recovery.
+
+The first job also scans the image with Trivy and validates Prometheus configuration with `promtool`. Third-party workflow actions are pinned to commit SHAs. The image scan fails on fixable HIGH or CRITICAL findings; unfixed vulnerabilities are not a passing-security guarantee.
 
 No deployment secrets are required. Repository permissions are limited to reading source. Hosted-runner availability and usage allowances are controlled by the GitHub account.
 
@@ -132,13 +134,13 @@ Suggested evidence to capture after running the project:
 - **Two replicas:** demonstrates a Deployment and rolling-update settings, not a measured availability guarantee.
 - **Resource requests are demo defaults:** tune them after measuring a real workload.
 - **No production authentication or TLS:** keep the demo local; use a production HTTP server and proper ingress/security architecture before exposing a real service.
-- **No software-supply-chain claim:** image signing, SBOMs, vulnerability scanning, and digest-pinned dependencies are future improvements, not completed features.
+- **Limited supply-chain controls:** Trivy scanning and pinned workflow-action commits are configured. Image signing, SBOM publication, and digest-pinned container images remain future improvements.
 
 ## Next increments
 
 - Add measured container-size and startup-time results after running Docker.
-- Add failure injection and a documented probe/recovery experiment.
-- Add vulnerability scanning and dependency pinning with reviewed updates.
+- Expand failure injection to dependency failures and load testing.
+- Add image signatures, SBOM publication, and digest-pinned container images.
 - Add an image registry and a separately approved persistent deployment environment.
 
 ## Author

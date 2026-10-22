@@ -72,6 +72,34 @@ class ServiceTests(unittest.TestCase):
             self.assertEqual(response.headers["X-Content-Type-Options"], "nosniff")
             self.assertEqual(response.headers["Cache-Control"], "no-store")
 
+    def test_readiness_failure_does_not_fail_liveness(self):
+        with patch.dict(os.environ, {"APP_READY": "false"}):
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                self.get("/readyz")
+            self.assertEqual(caught.exception.code, 503)
+            self.assertEqual(json.load(caught.exception)["status"], "not_ready")
+            with self.get("/healthz") as response:
+                self.assertEqual(response.status, 200)
+
+    def test_unrecognized_readiness_value_fails_closed(self):
+        with patch.dict(os.environ, {"APP_READY": "not-a-boolean"}):
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                self.get("/readyz")
+            self.assertEqual(caught.exception.code, 503)
+
+    def test_metrics_record_unready_responses(self):
+        with patch.dict(os.environ, {"APP_READY": "false"}):
+            with self.assertRaises(urllib.error.HTTPError):
+                self.get("/readyz")
+        with self.get("/metrics") as response:
+            text = response.read().decode()
+        count = int(next(line.split()[-1] for line in text.splitlines() if line.startswith('signal_requests_total{status="503"}')))
+        self.assertGreaterEqual(count, 1)
+
+    def test_info_does_not_leak_unrelated_environment_values(self):
+        with patch.dict(os.environ, {"DEMO_PRIVATE_VALUE": "do-not-expose"}), self.get("/api/info") as response:
+            self.assertNotIn("do-not-expose", response.read().decode())
+
 
 if __name__ == "__main__":
     unittest.main()
