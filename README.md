@@ -6,6 +6,14 @@
 
 A personal DevOps learning project: a small Python HTTP service, a hardened container, automated checks, an ephemeral Kubernetes deployment, and Prometheus metrics.
 
+## Live monitoring, visible failure
+
+Open **<http://localhost:8080/dashboard>** after starting the service. The dashboard reads real HTTP probes and process metrics every three seconds, with a request-rate chart and explicit degraded/disconnected states.
+
+![Monitoring dashboard captured from the running service](docs/screenshots/healthy.png)
+
+[Healthy, readiness-failure and disconnected screenshots + reproduction steps](docs/dashboard.md)
+
 This is a demonstration project, not an employer system. It does not claim production traffic, business impact, or measured uptime. The Python standard-library HTTP server is deliberately simple and is not intended for an internet-facing production service.
 
 ## What this demonstrates
@@ -51,6 +59,7 @@ Open <http://localhost:8080/>. Stop the server with Ctrl+C.
 | `/readyz` | Readiness; the demo has no external dependencies |
 | `/api/info` | Service name, configured environment, and version |
 | `/metrics` | Prometheus counter and process age |
+| `/dashboard` | Live browser dashboard for this service instance |
 
 Readiness returns HTTP 503 when `APP_READY=false`; liveness continues to return 200. This explicit simulation control supports a failure-and-recovery exercise in CI and the [operational runbook](docs/runbook.md). It is not a real external dependency check.
 
@@ -123,7 +132,7 @@ No deployment secrets are required. Repository permissions are limited to readin
 
 ## Evidence and verification
 
-See [docs/verification.md](docs/verification.md) for the actual verification status. A committed workflow is not proof of a successful workflow run. Add the first successful Actions run link after the repository is published; do not claim container or cluster tests passed until they do.
+See [docs/verification.md](docs/verification.md) for verification status and the [recorded successful pipeline](https://github.com/devijhanu130-hub/devops-signal/actions/runs/39854092436). The dashboard was also exercised against a real local service in healthy, readiness-failure, disconnected and recovery states; see the [browser evidence](docs/dashboard.md). The earlier pipeline run predates the dashboard addition.
 
 Suggested evidence to capture after running the project:
 

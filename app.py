@@ -3,6 +3,7 @@ import json
 import os
 import threading
 import time
+from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
@@ -21,6 +22,8 @@ class Handler(BaseHTTPRequestHandler):
             self.reply(200, b"DevOps Signal\nA personal project for container delivery and observability.\nEndpoints: /healthz /readyz /api/info /metrics\n", "text/plain; charset=utf-8")
         elif path == "/healthz":
             self.json_reply({"status": "ok", "check": "liveness"})
+        elif path == "/dashboard":
+            self.reply(200, Path(__file__).with_name("dashboard.html").read_bytes(), "text/html; charset=utf-8")
         elif path == "/readyz":
             ready = os.getenv("APP_READY", "true").lower() == "true"
             self.json_reply({"status": "ok" if ready else "not_ready", "check": "readiness"}, 200 if ready else 503)

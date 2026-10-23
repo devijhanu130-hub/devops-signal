@@ -1,5 +1,13 @@
 # Verification record
 
+## Dashboard increment — October 23, 2026
+
+Eleven HTTP tests passed locally, including serving the dashboard. Browser checks against the running Python service verified healthy probes, readiness 503 with liveness 200, real counters and rates, disconnected-state metric clearing, and reconnection after restart. [Screenshots and reproduction steps](dashboard.md).
+
+These checks verify the lightweight direct-metrics dashboard. They do not verify a live Prometheus scrape or Grafana. The workflow result below is historical and predates this increment.
+
+## Original pipeline evidence
+
 Date: October 22, 2026.
 
 | Check | Status |

@@ -40,6 +40,15 @@ class ServiceTests(unittest.TestCase):
             self.assertEqual(body["environment"], "test")
             self.assertNotIn("PATH", body)
 
+    def test_dashboard_is_served_with_live_metric_sources(self):
+        with self.get("/dashboard") as response:
+            self.assertEqual(response.status, 200)
+            self.assertIn("text/html", response.headers["Content-Type"])
+            page = response.read().decode()
+        for source in ["get('/healthz')", "get('/readyz')", "get('/metrics')"]:
+            self.assertIn(source, page)
+        self.assertIn("DISCONNECTED", page)
+
     def test_unknown_route_returns_json_404(self):
         with self.assertRaises(urllib.error.HTTPError) as caught:
             self.get("/does-not-exist")
