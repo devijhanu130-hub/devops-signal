@@ -6,6 +6,8 @@ Eleven HTTP tests passed locally, including serving the dashboard. Browser check
 
 These checks verify the lightweight direct-metrics dashboard. They do not verify a live Prometheus scrape or Grafana. The workflow result below is historical and predates this increment.
 
+The updated code commit `c68090c` also passed both CI jobs: [dashboard increment pipeline](https://github.com/devijhanu130-hub/devops-signal/actions/runs/39945595560). This run includes all 11 HTTP tests, container build/smoke checks, Trivy, promtool validation, and temporary Kubernetes rollout/failure/recovery.
+
 ## Original pipeline evidence
 
 Date: October 22, 2026.
